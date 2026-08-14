@@ -558,7 +558,8 @@ async function submitResponse(surveyId) {
         const message = document.getElementById("responseMessage");
         message.classList.remove("hidden");
         message.innerHTML = `
-            <strong>Response submitted!</strong> You can submit another response while the session is active.<br>
+            <strong>Response submitted!</strong><br>
+            You can submit another response while the session is active.<br>
             <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
         `;
 
