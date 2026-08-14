@@ -697,7 +697,12 @@ function renderAdminSessions() {
             ${
                 survey.active
                     ? `<button class="end-session" onclick="adminEndSession('${survey.id}')">End Session</button>`
-                    : `<button class="view-results" onclick="closeAdminModal(); showResults('${survey.id}')">View Results</button>`
+                    : `
+                        <div style="display: flex; gap: 8px; margin-top: 10px;">
+                            <button class="view-results" style="flex: 1;" onclick="closeAdminModal(); showResults('${survey.id}')">View Results</button>
+                            <button class="primary-btn" style="flex: 1; padding: 9px;" onclick="reopenSession('${survey.id}')">Re-open</button>
+                        </div>
+                      `
             }
         `;
 
@@ -814,3 +819,39 @@ async function loadFromUrl() {
 ========================================== */
 
 loadFromUrl();
+
+async function reopenSession(surveyId) {
+    const confirmed = confirm("Are you sure you want to re-open this survey session for another 10 minutes?");
+    if (!confirmed) return;
+
+    // Extend duration by 10 minutes from current time
+    const newExpiresAt = Date.now() + (10 * 60 * 1000);
+
+    // Update local state array
+    const survey = surveys.find(s => s.id === surveyId);
+    if (survey) {
+        survey.active = true;
+        survey.expiresAt = newExpiresAt;
+    }
+
+    saveSurveys();
+
+    // Update database directly
+    const { error } = await supabaseClient
+        .from("surveys")
+        .update({
+            active: true,
+            expires_at: newExpiresAt
+        })
+        .eq("id", surveyId);
+
+    if (error) {
+        alert("Could not re-open session: " + error.message);
+        return;
+    }
+
+    // Refresh data and modal view
+    await fetchSurveys();
+    renderAdminSessions();
+    renderSurveyList();
+}
