@@ -313,10 +313,10 @@ function showCreatedSurvey(survey) {
 
     renderSurvey(survey);
 
-    const url = `${window.location.origin}${window.location.pathname}?survey=${survey.id}`;
+    // Append mode=respond for shared participant links
+    const url = `${window.location.origin}${window.location.pathname}?survey=${survey.id}&mode=respond`;
     history.pushState({}, "", url);
 
-    // Open share modal with generated URL
     openShareModal(url);
 }
 
@@ -533,7 +533,9 @@ function startTimer(survey) {
 ========================================== */
 
 async function submitResponse(surveyId) {
-    // Re-fetch latest survey state to avoid race conditions
+    const params = new URLSearchParams(window.location.search);
+    const isRespondent = params.get("mode") === "respond";
+
     const { data: survey, error } = await supabaseClient
         .from("surveys")
         .select("*")
@@ -547,7 +549,6 @@ async function submitResponse(surveyId) {
     }
 
     const answers = [];
-
     for (const question of survey.questions) {
         const selected = document.querySelectorAll(`input[name="question-${question.id}"]:checked`);
         if (selected.length === 0) {
@@ -562,7 +563,6 @@ async function submitResponse(surveyId) {
         });
     }
 
-    // Mutate options local to this update payload
     answers.forEach(answer => {
         const q = survey.questions.find(q => q.id === answer.questionId);
         if (q) q.options[answer.optionIndex].votes++;
@@ -570,7 +570,6 @@ async function submitResponse(surveyId) {
 
     const updatedResponses = survey.responses + 1;
 
-    // Send payload update back to Supabase
     const { error: updateError } = await supabaseClient
         .from("surveys")
         .update({
@@ -584,20 +583,25 @@ async function submitResponse(surveyId) {
         return;
     }
 
-    document.getElementById("submitResponseBtn").classList.add("hidden");
+    if (isRespondent) {
+        // Keep respondent on page awaiting session end
+        document.getElementById("surveyQuestions").classList.add("hidden");
+        document.getElementById("submitResponseBtn").classList.add("hidden");
 
-    const message = document.getElementById("responseMessage");
-    message.classList.remove("hidden");
-    message.innerHTML = `
-        <strong>Response submitted!</strong><br>Thank you for participating.
-    `;
-
-    const anotherBtn = document.getElementById("anotherResponseBtn");
-    anotherBtn.classList.remove("hidden");
-
-    anotherBtn.onclick = () => {
-        window.location.reload();
-    };
+        const message = document.getElementById("responseMessage");
+        message.classList.remove("hidden");
+        message.innerHTML = `
+            <strong>Response submitted!</strong><br>
+            Please stay on this page. Results will appear automatically when the session ends.
+        `;
+    } else {
+        // Default host view
+        document.getElementById("submitResponseBtn").classList.add("hidden");
+        const message = document.getElementById("responseMessage");
+        message.classList.remove("hidden");
+        message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
+        document.getElementById("anotherResponseBtn").classList.remove("hidden");
+    }
 }
 
 /* ==========================================
@@ -1037,6 +1041,7 @@ function goToHome() {
 async function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const surveyId = params.get("survey");
+    const mode = params.get("mode");
 
     if (!surveyId) {
         await showHome();
@@ -1055,14 +1060,33 @@ async function loadFromUrl() {
         return;
     }
 
-    // Map database snake_case columns back to frontend expected properties
     survey.createdAt = survey.created_at;
     survey.expiresAt = survey.expires_at;
-
     currentSurveyId = surveyId;
 
+    await fetchSurveys();
+
+    // Link Respondent Flow
+    if (mode === "respond") {
+        // Hide Admin & Back controls for linked respondents
+        const backBtn = document.querySelector("#surveyPage .back-btn");
+        const adminBtn = document.getElementById("adminBtn");
+        if (backBtn) backBtn.classList.add("hidden");
+        if (adminBtn) adminBtn.classList.add("hidden");
+
+        if (!survey.active || Date.now() >= survey.expiresAt) {
+            endSurvey(surveyId);
+            showResults(surveyId);
+            return;
+        }
+
+        openSurvey(surveyId);
+        return;
+    }
+
+    // Default Host / Admin Flow
     if (!survey.active || Date.now() >= survey.expiresAt) {
-        await endSurvey(surveyId);
+        endSurvey(surveyId);
         showResults(surveyId);
         return;
     }
