@@ -786,6 +786,10 @@ async function loadFromUrl() {
         if (backBtn) backBtn.classList.add("hidden");
         if (adminBtn) adminBtn.classList.add("hidden");
 
+        // Apply the CSS class to disable top bar header navigation
+        const brand = document.querySelector(".brand");
+        if (brand) brand.classList.add("disabled");
+
         if (!survey.active || Date.now() >= survey.expiresAt) {
             await endSurvey(surveyId);
             showResults(surveyId);

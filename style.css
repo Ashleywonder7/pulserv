@@ -955,3 +955,8 @@ textarea {
     text-align: center;
     padding: 50px 20px;
 }
+
+.brand.disabled {
+    pointer-events: none;
+    cursor: default;
+}
