@@ -19,10 +19,6 @@ const STORAGE_KEY = "pulserv_surveys";
    PAGE NAVIGATION
 ========================================== */
 
-/* ==========================================
-   PAGE NAVIGATION WITH SMOOTH TRANSITIONS
-========================================== */
-
 function hideAllPages() {
     document.querySelectorAll(".page").forEach(page => {
         page.classList.add("hidden");
@@ -36,8 +32,6 @@ function showPage(pageId) {
     const targetPage = document.getElementById(pageId);
     if (targetPage) {
         targetPage.classList.remove("hidden");
-        
-        // Trigger smooth reflow animation
         void targetPage.offsetWidth; 
         targetPage.classList.add("fade-in");
     }
@@ -58,52 +52,22 @@ function showCreate() {
    CREATE SURVEY
 ========================================== */
 
-document
-    .getElementById("createSurveyBtn")
-    .addEventListener("click", showCreate);
-
-
-document
-    .getElementById("addQuestionBtn")
-    .addEventListener("click", addQuestion);
-
+document.getElementById("createSurveyBtn").addEventListener("click", showCreate);
+document.getElementById("addQuestionBtn").addEventListener("click", addQuestion);
 
 function addQuestion() {
-
-    const container =
-        document.getElementById("questionsContainer");
-
-    const questionNumber =
-        container.children.length + 1;
-
+    const container = document.getElementById("questionsContainer");
+    const questionNumber = container.children.length + 1;
     const question = document.createElement("div");
 
     question.className = "question-card";
-
     question.innerHTML = `
-
         <div class="question-top">
-
-            <span class="question-number">
-                QUESTION ${questionNumber}
-            </span>
-
-            <button
-                type="button"
-                class="delete-question"
-                onclick="deleteQuestion(this)"
-            >
-                Remove
-            </button>
-
+            <span class="question-number">QUESTION ${questionNumber}</span>
+            <button type="button" class="delete-question" onclick="deleteQuestion(this)">Remove</button>
         </div>
 
-        <input
-            class="question-input"
-            type="text"
-            placeholder="Enter your question..."
-            required
-        >
+        <input class="question-input" type="text" placeholder="Enter your question..." required>
 
         <div class="toggle-row">
             <label class="toggle-switch">
@@ -114,127 +78,55 @@ function addQuestion() {
         </div>
 
         <div class="options-container">
-
             <div class="option-row">
-
-                <input
-                    type="text"
-                    placeholder="Option 1"
-                    required
-                >
-
-                <button
-                    type="button"
-                    class="remove-option"
-                    onclick="removeOption(this)"
-                >
-                    ×
-                </button>
-
+                <input type="text" placeholder="Option 1" required>
+                <button type="button" class="remove-option" onclick="removeOption(this)">×</button>
             </div>
-
             <div class="option-row">
-
-                <input
-                    type="text"
-                    placeholder="Option 2"
-                    required
-                >
-
-                <button
-                    type="button"
-                    class="remove-option"
-                    onclick="removeOption(this)"
-                >
-                    ×
-                </button>
-
+                <input type="text" placeholder="Option 2" required>
+                <button type="button" class="remove-option" onclick="removeOption(this)">×</button>
             </div>
-
         </div>
 
-        <button
-            type="button"
-            class="add-option"
-            onclick="addOption(this)"
-        >
-            + Add option
-        </button>
+        <button type="button" class="add-option" onclick="addOption(this)">+ Add option</button>
     `;
 
     container.appendChild(question);
 }
 
-
 function deleteQuestion(button) {
-
     button.closest(".question-card").remove();
-
     renumberQuestions();
 }
 
-
 function renumberQuestions() {
-
-    document
-        .querySelectorAll(".question-card")
-        .forEach((card, index) => {
-
-            card.querySelector(".question-number")
-                .textContent = `QUESTION ${index + 1}`;
-
-        });
+    document.querySelectorAll(".question-card").forEach((card, index) => {
+        card.querySelector(".question-number").textContent = `QUESTION ${index + 1}`;
+    });
 }
 
-
 function addOption(button) {
-
-    const optionsContainer =
-        button.parentElement.querySelector(".options-container");
-
-    const optionNumber =
-        optionsContainer.children.length + 1;
-
+    const optionsContainer = button.parentElement.querySelector(".options-container");
+    const optionNumber = optionsContainer.children.length + 1;
     const option = document.createElement("div");
 
     option.className = "option-row";
-
     option.innerHTML = `
-
-        <input
-            type="text"
-            placeholder="Option ${optionNumber}"
-            required
-        >
-
-        <button
-            type="button"
-            class="remove-option"
-            onclick="removeOption(this)"
-        >
-            ×
-        </button>
+        <input type="text" placeholder="Option ${optionNumber}" required>
+        <button type="button" class="remove-option" onclick="removeOption(this)">×</button>
     `;
 
     optionsContainer.appendChild(option);
 }
 
-
 function removeOption(button) {
-
-    const options =
-        button.closest(".options-container");
-
+    const options = button.closest(".options-container");
     if (options.children.length <= 2) {
-
         alert("Each question needs at least two options.");
-
         return;
     }
-
     button.parentElement.remove();
 }
-
 
 /* ==========================================
    SAVE SURVEY TO SUPABASE
@@ -290,7 +182,6 @@ document.getElementById("surveyForm").addEventListener("submit", async function(
 
     currentSurveyId = newSurvey.id;
     
-    // Map snake_case to match frontend naming expectations
     const formattedSurvey = {
         ...newSurvey,
         createdAt: newSurvey.created_at,
@@ -299,7 +190,6 @@ document.getElementById("surveyForm").addEventListener("submit", async function(
 
     showCreatedSurvey(formattedSurvey);
 });
-
 
 /* ==========================================
    CREATED SURVEY / SHARE MODAL
@@ -313,7 +203,6 @@ function showCreatedSurvey(survey) {
 
     renderSurvey(survey);
 
-    // Append mode=respond so shared links open in participant mode on external devices
     const url = `${window.location.origin}${window.location.pathname}?survey=${survey.id}&mode=respond`;
     history.pushState({}, "", url);
 
@@ -328,10 +217,24 @@ function openShareModal(url) {
     input.value = url;
     copyBtn.textContent = "Copy";
     modal.classList.remove("hidden");
+
+    // Close when clicking background overlay
+    modal.onclick = function (e) {
+        if (e.target === modal) {
+            closeShareModal();
+        }
+    };
 }
 
 function closeShareModal() {
-    document.getElementById("shareModal").classList.add("hidden");
+    const modal = document.getElementById("shareModal");
+    modal.classList.add("hidden");
+    modal.onclick = null;
+}
+
+function reopenShareModal(surveyId) {
+    const url = `${window.location.origin}${window.location.pathname}?survey=${surveyId}&mode=respond`;
+    openShareModal(url);
 }
 
 function copyShareUrl() {
@@ -339,7 +242,7 @@ function copyShareUrl() {
     const copyBtn = document.getElementById("copyUrlBtn");
 
     input.select();
-    input.setSelectionRange(0, 99999); // Mobile devices
+    input.setSelectionRange(0, 99999);
 
     navigator.clipboard.writeText(input.value).then(() => {
         copyBtn.textContent = "Copied!";
@@ -348,7 +251,6 @@ function copyShareUrl() {
         }, 2000);
     });
 }
-
 
 /* ==========================================
    RENDER SURVEY
@@ -401,11 +303,9 @@ function renderSurvey(survey) {
     submitBtn.classList.remove("hidden");
     submitBtn.disabled = false;
 
-    // Reset message visibility first
     document.getElementById("responseMessage").classList.add("hidden");
     document.getElementById("anotherResponseBtn").classList.add("hidden");
 
-    // Display status banner for link respondents
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "respond") {
         const message = document.getElementById("responseMessage");
@@ -419,7 +319,6 @@ function renderSurvey(survey) {
     startTimer(survey);
 }
 
-
 /* ==========================================
    TIMER
 ========================================== */
@@ -427,75 +326,46 @@ function renderSurvey(survey) {
 let timerInterval = null;
 
 function startTimer(survey) {
-
     clearInterval(timerInterval);
+    const timer = document.getElementById("timer");
 
-    const timer =
-        document.getElementById("timer");
+    async function updateTimer() {
+        const { data: dbSurvey } = await supabaseClient
+            .from("surveys")
+            .select("active, expires_at")
+            .eq("id", survey.id)
+            .single();
 
-    function updateTimer() {
+        const isActive = dbSurvey ? dbSurvey.active : survey.active;
+        const expiresAt = dbSurvey ? dbSurvey.expires_at : survey.expiresAt;
+        const remaining = expiresAt - Date.now();
 
-        const remaining =
-            survey.expiresAt - Date.now();
-
-        if (remaining <= 0) {
-
+        if (!isActive || remaining <= 0) {
             clearInterval(timerInterval);
-
-            endSurvey(survey.id);
-
-            timer.textContent =
-                "This survey has ended.";
-
-            submitResponseBtn.disabled = true;
-
+            await endSurvey(survey.id);
+            if (timer) timer.textContent = "This survey has ended.";
             showResults(survey.id);
-
             return;
         }
 
-
-        const totalSeconds =
-            Math.floor(remaining / 1000);
-
-        const hours =
-            Math.floor(totalSeconds / 3600);
-
-        const minutes =
-            Math.floor(
-                (totalSeconds % 3600) / 60
-            );
-
-        const seconds =
-            totalSeconds % 60;
-
+        const totalSeconds = Math.floor(remaining / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
 
         if (hours > 0) {
-
-            timer.textContent =
-                `⏱ ${hours}h ${minutes}m ${seconds}s remaining`;
-
+            timer.textContent = `⏱ ${hours}h ${minutes}m ${seconds}s remaining`;
         } else {
-
-            timer.textContent =
-                `⏱ ${minutes}m ${seconds}s remaining`;
+            timer.textContent = `⏱ ${minutes}m ${seconds}s remaining`;
         }
     }
 
-
     updateTimer();
-
-    timerInterval =
-        setInterval(updateTimer, 1000);
+    timerInterval = setInterval(updateTimer, 3000);
 }
-
 
 /* ==========================================
    SUBMIT RESPONSE
-========================================== */
-
-/* ==========================================
-   SUBMIT RESPONSE & END SESSION
 ========================================== */
 
 async function submitResponse(surveyId) {
@@ -509,7 +379,7 @@ async function submitResponse(surveyId) {
         .single();
 
     if (error || !survey || !survey.active || Date.now() >= survey.expires_at) {
-        endSurvey(surveyId);
+        await endSurvey(surveyId);
         showResults(surveyId);
         return;
     }
@@ -549,46 +419,47 @@ async function submitResponse(surveyId) {
         return;
     }
 
+    const submitBtn = document.getElementById("submitResponseBtn");
+    const message = document.getElementById("responseMessage");
+    const anotherBtn = document.getElementById("anotherResponseBtn");
+
+    document.getElementById("surveyQuestions").classList.add("hidden");
+    submitBtn.classList.add("hidden");
+
+    message.classList.remove("hidden");
+    
     if (isRespondent) {
-        // Participant flow: clear inputs & maintain session
+        message.innerHTML = `
+            <strong>Response submitted!</strong><br>
+            Thank you for participating.<br>
+            <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
+        `;
+    } else {
+        message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
+    }
+
+    anotherBtn.classList.remove("hidden");
+
+    anotherBtn.onclick = () => {
         document.querySelectorAll(`#surveyQuestions input:checked`).forEach(input => {
             input.checked = false;
         });
 
-        const message = document.getElementById("responseMessage");
-        message.classList.remove("hidden");
-        message.innerHTML = `
-            <strong>Response submitted!</strong><br>
-            You can submit another response while the session is active.<br>
-            <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
-        `;
+        document.getElementById("surveyQuestions").classList.remove("hidden");
+        message.classList.add("hidden");
+        anotherBtn.classList.add("hidden");
+        submitBtn.classList.remove("hidden");
 
-        document.getElementById("surveyQuestions").scrollIntoView({ behavior: "smooth" });
-    } else {
-        // Host flow: hide submit, show success message & enable another response button
-        const submitBtn = document.getElementById("submitResponseBtn");
-        const message = document.getElementById("responseMessage");
-        const anotherBtn = document.getElementById("anotherResponseBtn");
+        if (isRespondent) {
+            message.classList.remove("hidden");
+            message.innerHTML = `
+                <strong>Session Active</strong><br>
+                <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
+            `;
+        }
 
-        submitBtn.classList.add("hidden");
-        message.classList.remove("hidden");
-        message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
-        anotherBtn.classList.remove("hidden");
-
-        anotherBtn.onclick = () => {
-            // Uncheck inputs
-            document.querySelectorAll(`#surveyQuestions input:checked`).forEach(input => {
-                input.checked = false;
-            });
-
-            // Restore form layout
-            message.classList.add("hidden");
-            anotherBtn.classList.add("hidden");
-            submitBtn.classList.remove("hidden");
-
-            document.getElementById("surveyQuestions").scrollIntoView({ behavior: "smooth" });
-        };
-    }
+        document.getElementById("surveyHeader").scrollIntoView({ behavior: "smooth" });
+    };
 }
 
 /* ==========================================
@@ -596,7 +467,6 @@ async function submitResponse(surveyId) {
 ========================================== */
 
 async function endSurvey(surveyId) {
-    // Update local state
     const survey = surveys.find(s => s.id === surveyId);
     if (survey) {
         survey.active = false;
@@ -604,26 +474,25 @@ async function endSurvey(surveyId) {
 
     saveSurveys();
 
-    // Update Supabase directly
     await supabaseClient
         .from("surveys")
         .update({ active: false })
         .eq("id", surveyId);
 }
 
-
 /* ==========================================
    RESULTS
 ========================================== */
 
-function showResults(surveyId) {
+async function showResults(surveyId) {
+    clearInterval(timerInterval);
+    await fetchSurveys();
+
     const survey = surveys.find(s => s.id === surveyId);
     if (!survey) return;
 
-    clearInterval(timerInterval);
     showPage("resultsPage");
 
-    // Hide Back to Home button for participant link users
     const params = new URLSearchParams(window.location.search);
     const resultsBackBtn = document.querySelector("#resultsPage .back-btn");
 
@@ -642,30 +511,15 @@ function showResults(surveyId) {
     const resultsContent = document.getElementById("resultsContent");
     resultsContent.innerHTML = "";
 
-    if (params.get("mode") === "respond") {
-    const endingNote = document.createElement("p");
-    endingNote.style.textAlign = "center";
-    endingNote.style.marginTop = "20px";
-    endingNote.innerHTML = "<strong>Thank you for participating!</strong><br>This session has concluded.";
-    resultsContent.appendChild(endingNote);
-    }
-
     survey.questions.forEach((question, index) => {
         const questionDiv = document.createElement("div");
         questionDiv.className = "result-question";
 
-        const totalVotes = question.options.reduce(
-            (sum, option) => sum + option.votes,
-            0
-        );
-
+        const totalVotes = question.options.reduce((sum, option) => sum + option.votes, 0);
         let optionsHTML = "";
 
         question.options.forEach(option => {
-            const percentage =
-                totalVotes === 0
-                    ? 0
-                    : Math.round((option.votes / totalVotes) * 100);
+            const percentage = totalVotes === 0 ? 0 : Math.round((option.votes / totalVotes) * 100);
 
             optionsHTML += `
                 <div class="result-option">
@@ -687,19 +541,18 @@ function showResults(surveyId) {
 
         resultsContent.appendChild(questionDiv);
     });
-}
 
+    if (params.get("mode") === "respond") {
+        const note = document.createElement("p");
+        note.style.textAlign = "center";
+        note.style.marginTop = "25px";
+        note.innerHTML = "<strong>Thank you for participating!</strong><br>This session has concluded.";
+        resultsContent.appendChild(note);
+    }
+}
 
 /* ==========================================
    HOME SURVEY LIST
-========================================== */
-
-/* ==========================================
-   FETCH & RENDER SURVEYS
-========================================== */
-
-/* ==========================================
-   FETCH & RENDER SURVEYS
 ========================================== */
 
 async function fetchSurveys() {
@@ -714,7 +567,6 @@ async function fetchSurveys() {
         return [];
     }
 
-    // Standardize object properties for frontend consumption
     surveys = (data || []).map(survey => ({
         ...survey,
         createdAt: survey.created_at,
@@ -729,10 +581,8 @@ async function renderSurveyList() {
     list.innerHTML = "<p>Loading surveys...</p>";
 
     await fetchSurveys();
-
     list.innerHTML = "";
 
-    // Empty state check
     if (!surveys || surveys.length === 0) {
         list.innerHTML = `
             <div class="survey-card empty-state">
@@ -765,13 +615,15 @@ async function renderSurveyList() {
                 <button class="secondary-btn" onclick="showResults('${survey.id}')">
                     Results
                 </button>
+                <button class="secondary-btn" onclick="reopenShareModal('${survey.id}')">
+                    Share
+                </button>
             </div>
         `;
 
         list.appendChild(card);
     });
 }
-
 
 /* ==========================================
    OPEN SURVEY
@@ -790,8 +642,7 @@ function openSurvey(id) {
     }
 
     showPage("surveyPage");
-    
-    // Preserve mode parameter if present in the current URL
+
     const params = new URLSearchParams(window.location.search);
     const modeParam = params.get("mode") ? `&mode=${params.get("mode")}` : "";
     const url = `${window.location.origin}${window.location.pathname}?survey=${id}${modeParam}`;
@@ -800,102 +651,59 @@ function openSurvey(id) {
     renderSurvey(survey);
 }
 
-
 /* ==========================================
    ADMIN
 ========================================== */
 
-document
-    .getElementById("adminBtn")
-    .addEventListener("click", openAdminModal);
+document.getElementById("adminBtn").addEventListener("click", openAdminModal);
 
-
-function openAdminModal() {
-
-    const modal =
-        document.getElementById("adminModal");
-
+async function openAdminModal() {
+    const modal = document.getElementById("adminModal");
     modal.classList.remove("hidden");
 
+    // Close modal when clicking outside content area
+    modal.onclick = function (e) {
+        if (e.target === modal) {
+            closeAdminModal();
+        }
+    };
+
+    await fetchSurveys();
     renderAdminSessions();
 }
 
-
 function closeAdminModal() {
-
-    document
-        .getElementById("adminModal")
-        .classList.add("hidden");
+    const modal = document.getElementById("adminModal");
+    modal.classList.add("hidden");
+    modal.onclick = null;
 }
 
-
 function renderAdminSessions() {
-
-    const container =
-        document.getElementById("adminSessions");
-
+    const container = document.getElementById("adminSessions");
     container.innerHTML = "";
 
-
     if (surveys.length === 0) {
-
-        container.innerHTML =
-            "<p>No sessions have been created yet.</p>";
-
+        container.innerHTML = "<p>No sessions have been created yet.</p>";
         return;
     }
 
+    surveys.forEach(survey => {
+        const div = document.createElement("div");
+        div.className = "admin-session";
 
-    surveys
-        .slice()
-        .reverse()
-        .forEach(survey => {
+        div.innerHTML = `
+            <h4>${escapeHtml(survey.title)}</h4>
+            <small>${survey.responses} response(s)</small>
+            ${
+                survey.active
+                    ? `<button class="end-session" onclick="adminEndSession('${survey.id}')">End Session</button>`
+                    : `<button class="view-results" onclick="closeAdminModal(); showResults('${survey.id}')">View Results</button>`
+            }
+        `;
 
-            const div =
-                document.createElement("div");
-
-            div.className =
-                "admin-session";
-
-
-            div.innerHTML = `
-
-                <h4>
-                    ${escapeHtml(survey.title)}
-                </h4>
-
-                <small>
-                    ${survey.responses} response(s)
-                </small>
-
-                ${
-                    survey.active
-                        ? `
-                            <button
-                                class="end-session"
-                                onclick="adminEndSession('${survey.id}')"
-                            >
-                                End Session
-                            </button>
-                          `
-                        : `
-                            <button
-                                class="view-results"
-                                onclick="closeAdminModal(); showResults('${survey.id}')"
-                            >
-                                View Results
-                            </button>
-                          `
-                }
-
-            `;
-
-
-            container.appendChild(div);
-
-        });
+        container.appendChild(div);
+    });
 }
-
 
 async function adminEndSession(id) {
     const confirmed = confirm(
@@ -905,87 +713,42 @@ async function adminEndSession(id) {
     if (!confirmed) return;
 
     await endSurvey(id);
-
-    // Refresh data and UI
     await fetchSurveys();
+
     renderAdminSessions();
     renderSurveyList();
 }
 
-
 /* ==========================================
-   LOCAL STORAGE
+   LOCAL STORAGE & HELPERS
 ========================================== */
 
 function saveSurveys() {
-
-    localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(surveys)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(surveys));
 }
-
-
-/* ==========================================
-   HELPERS
-========================================== */
 
 function generateId() {
-
-    return (
-        Date.now().toString(36) +
-        Math.random().toString(36).substring(2, 9)
-    );
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
-
 function escapeHtml(text) {
-
-    const div =
-        document.createElement("div");
-
+    const div = document.createElement("div");
     div.textContent = text;
-
     return div.innerHTML;
 }
 
-
-
-
-
-/*
-   Keep timers / session status accurate
-   when the browser remains open.
-*/
-
 setInterval(() => {
-
     surveys.forEach(survey => {
-
-        if (
-            survey.active &&
-            Date.now() >= survey.expiresAt
-        ) {
-
+        if (survey.active && Date.now() >= survey.expiresAt) {
             survey.active = false;
         }
-
     });
-
     saveSurveys();
-
 }, 5000);
 
 function goToHome() {
-
     clearInterval(timerInterval);
-
-    history.pushState(
-        {},
-        "",
-        window.location.pathname
-    );
-
+    history.pushState({}, "", window.location.pathname);
     showHome();
 }
 
@@ -1017,16 +780,14 @@ async function loadFromUrl() {
 
     await fetchSurveys();
 
-    // Link Respondent Flow
     if (mode === "respond") {
-        // Hide Admin and Back controls for participants
         const backBtn = document.querySelector("#surveyPage .back-btn");
         const adminBtn = document.getElementById("adminBtn");
         if (backBtn) backBtn.classList.add("hidden");
         if (adminBtn) adminBtn.classList.add("hidden");
 
         if (!survey.active || Date.now() >= survey.expiresAt) {
-            endSurvey(surveyId);
+            await endSurvey(surveyId);
             showResults(surveyId);
             return;
         }
@@ -1035,9 +796,8 @@ async function loadFromUrl() {
         return;
     }
 
-    // Default Host / Admin Flow
     if (!survey.active || Date.now() >= survey.expiresAt) {
-        endSurvey(surveyId);
+        await endSurvey(surveyId);
         showResults(surveyId);
         return;
     }

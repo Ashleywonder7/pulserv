@@ -359,8 +359,20 @@ p {
 
 .card-actions {
     display: flex;
+    flex-wrap: wrap; /* Allows the Share button to sit on a new line */
     gap: 8px;
     margin-top: 18px;
+}
+
+/* Open and Results buttons split the top row 50/50 */
+.card-actions button:nth-child(1),
+.card-actions button:nth-child(2) {
+    flex: 1 1 calc(50% - 4px);
+}
+
+/* Share button stretches across the entire bottom row */
+.card-actions button:nth-child(3) {
+    flex: 1 1 100%;
 }
 
 .card-actions button {
