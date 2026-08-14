@@ -313,7 +313,7 @@ function showCreatedSurvey(survey) {
 
     renderSurvey(survey);
 
-    // Append mode=respond for shared participant links
+    // Append mode=respond so shared links open in participant mode on external devices
     const url = `${window.location.origin}${window.location.pathname}?survey=${survey.id}&mode=respond`;
     history.pushState({}, "", url);
 
@@ -355,100 +355,66 @@ function copyShareUrl() {
 ========================================== */
 
 function renderSurvey(survey) {
-
-    const header =
-        document.getElementById("surveyHeader");
-
-    const questions =
-        document.getElementById("surveyQuestions");
-
-    const submitBtn =
-        document.getElementById("submitResponseBtn");
+    const header = document.getElementById("surveyHeader");
+    const questions = document.getElementById("surveyQuestions");
+    const submitBtn = document.getElementById("submitResponseBtn");
 
     header.innerHTML = `
-
         <div class="survey-header">
-
-            <span class="eyebrow">
-                SURVEY
-            </span>
-
+            <span class="eyebrow">SURVEY</span>
             <h2>${escapeHtml(survey.title)}</h2>
-
-            <p>
-                ${escapeHtml(survey.description || "")}
-            </p>
-
-            <div
-                id="timer"
-                class="timer"
-            >
-                Loading timer...
-            </div>
-
+            <p>${escapeHtml(survey.description || "")}</p>
+            <div id="timer" class="timer">Loading timer...</div>
         </div>
     `;
 
-
     questions.innerHTML = "";
 
-
     survey.questions.forEach((question, index) => {
-
-        const questionDiv =
-            document.createElement("div");
-
-        questionDiv.className =
-            "question-display";
+        const questionDiv = document.createElement("div");
+        questionDiv.className = "question-display";
 
         let optionsHTML = "";
-
         const inputType = question.allowMultiple ? "checkbox" : "radio";
 
         question.options.forEach((option, optionIndex) => {
-
             optionsHTML += `
-
                 <label class="option-label">
-
-                    <input
-                        type="${inputType}"
-                        name="question-${question.id}"
-                        value="${optionIndex}"
-                    >
-
-                    <span>
-                        ${escapeHtml(option.text)}
-                    </span>
-
+                    <input type="${inputType}" name="question-${question.id}" value="${optionIndex}">
+                    <span>${escapeHtml(option.text)}</span>
                 </label>
             `;
-
         });
 
-
         questionDiv.innerHTML = `
-
             <h3>
                 ${index + 1}. ${escapeHtml(question.text)}
                 ${question.allowMultiple ? '<span class="multi-hint">Select all that apply</span>' : ""}
             </h3>
-
             ${optionsHTML}
         `;
 
-
         questions.appendChild(questionDiv);
-
     });
-
 
     submitBtn.onclick = () => submitResponse(survey.id);
     submitBtn.classList.remove("hidden");
     submitBtn.disabled = false;
 
+    // Reset message visibility first
     document.getElementById("responseMessage").classList.add("hidden");
     document.getElementById("anotherResponseBtn").classList.add("hidden");
+
+    // Display status banner for link respondents
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("mode") === "respond") {
+        const message = document.getElementById("responseMessage");
+        message.classList.remove("hidden");
+        message.innerHTML = `
+            <strong>Session Active</strong><br>
+            <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
+        `;
+    }
 
     startTimer(survey);
 }
@@ -584,16 +550,21 @@ async function submitResponse(surveyId) {
     }
 
     if (isRespondent) {
-        // Keep respondent on page awaiting session end
-        document.getElementById("surveyQuestions").classList.add("hidden");
-        document.getElementById("submitResponseBtn").classList.add("hidden");
+        // Clear selected choices so they can submit another response
+        document.querySelectorAll(`#surveyQuestions input:checked`).forEach(input => {
+            input.checked = false;
+        });
 
+        // Show confirmation banner without hiding questions
         const message = document.getElementById("responseMessage");
         message.classList.remove("hidden");
         message.innerHTML = `
-            <strong>Response submitted!</strong><br>
-            Please stay on this page. Results will appear automatically when the session ends.
+            <strong>Response submitted!</strong> You can submit another response while the session is active.<br>
+            <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
         `;
+
+        // Smoothly scroll back to the top of the questions
+        document.getElementById("surveyQuestions").scrollIntoView({ behavior: "smooth" });
     } else {
         // Default host view
         document.getElementById("submitResponseBtn").classList.add("hidden");
@@ -840,10 +811,14 @@ function openSurvey(id) {
     }
 
     showPage("surveyPage");
-    renderSurvey(survey);
-
-    const url = `${window.location.origin}${window.location.pathname}?survey=${id}`;
+    
+    // Preserve mode parameter if present in the current URL
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get("mode") ? `&mode=${params.get("mode")}` : "";
+    const url = `${window.location.origin}${window.location.pathname}?survey=${id}${modeParam}`;
     history.pushState({}, "", url);
+
+    renderSurvey(survey);
 }
 
 
@@ -1068,7 +1043,7 @@ async function loadFromUrl() {
 
     // Link Respondent Flow
     if (mode === "respond") {
-        // Hide Admin & Back controls for linked respondents
+        // Hide Admin and Back controls for participants
         const backBtn = document.querySelector("#surveyPage .back-btn");
         const adminBtn = document.getElementById("adminBtn");
         if (backBtn) backBtn.classList.add("hidden");
@@ -1093,9 +1068,3 @@ async function loadFromUrl() {
 
     openSurvey(surveyId);
 }
-
-/* ==========================================
-   INITIALIZE APP
-========================================== */
-
-loadFromUrl();
