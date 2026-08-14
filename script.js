@@ -218,7 +218,6 @@ function openShareModal(url) {
     copyBtn.textContent = "Copy";
     modal.classList.remove("hidden");
 
-    // Close when clicking background overlay
     modal.onclick = function (e) {
         if (e.target === modal) {
             closeShareModal();
@@ -253,7 +252,7 @@ function copyShareUrl() {
 }
 
 /* ==========================================
-   RENDER SURVEY
+   RENDER HOST SURVEY
 ========================================== */
 
 function renderSurvey(survey) {
@@ -306,15 +305,66 @@ function renderSurvey(survey) {
     document.getElementById("responseMessage").classList.add("hidden");
     document.getElementById("anotherResponseBtn").classList.add("hidden");
 
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("mode") === "respond") {
-        const message = document.getElementById("responseMessage");
-        message.classList.remove("hidden");
-        message.innerHTML = `
-            <strong>Session Active</strong><br>
-            <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
+    startTimer(survey);
+}
+
+/* ==========================================
+   ISOLATED RESPONDENT PAGE RENDER
+========================================== */
+
+function renderRespondentPage(survey) {
+    const header = document.getElementById("respondentHeader");
+    const questions = document.getElementById("respondentQuestions");
+    const submitBtn = document.getElementById("submitRespondentBtn");
+
+    header.innerHTML = `
+        <div class="survey-header">
+            <span class="eyebrow">SURVEY</span>
+            <h2>${escapeHtml(survey.title)}</h2>
+            <p>${escapeHtml(survey.description || "")}</p>
+            <div id="timer" class="timer">Loading timer...</div>
+        </div>
+    `;
+
+    questions.innerHTML = "";
+
+    survey.questions.forEach((question, index) => {
+        const questionDiv = document.createElement("div");
+        questionDiv.className = "question-display";
+
+        let optionsHTML = "";
+        const inputType = question.allowMultiple ? "checkbox" : "radio";
+
+        question.options.forEach((option, optionIndex) => {
+            optionsHTML += `
+                <label class="option-label">
+                    <input type="${inputType}" name="resp-question-${question.id}" value="${optionIndex}">
+                    <span>${escapeHtml(option.text)}</span>
+                </label>
+            `;
+        });
+
+        questionDiv.innerHTML = `
+            <h3>
+                ${index + 1}. ${escapeHtml(question.text)}
+                ${question.allowMultiple ? '<span class="multi-hint">Select all that apply</span>' : ""}
+            </h3>
+            ${optionsHTML}
         `;
-    }
+
+        questions.appendChild(questionDiv);
+    });
+
+    submitBtn.onclick = () => submitRespondentResponse(survey.id);
+    submitBtn.classList.remove("hidden");
+    submitBtn.disabled = false;
+
+    const message = document.getElementById("respondentMessage");
+    message.classList.remove("hidden");
+    message.innerHTML = `
+        <strong>Session Active</strong><br>
+        <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
+    `;
 
     startTimer(survey);
 }
@@ -354,9 +404,9 @@ function startTimer(survey) {
         const seconds = totalSeconds % 60;
 
         if (hours > 0) {
-            timer.textContent = `⏱ ${hours}h ${minutes}m ${seconds}s remaining`;
+            if (timer) timer.textContent = `⏱ ${hours}h ${minutes}m ${seconds}s remaining`;
         } else {
-            timer.textContent = `⏱ ${minutes}m ${seconds}s remaining`;
+            if (timer) timer.textContent = `⏱ ${minutes}m ${seconds}s remaining`;
         }
     }
 
@@ -365,13 +415,10 @@ function startTimer(survey) {
 }
 
 /* ==========================================
-   SUBMIT RESPONSE
+   SUBMIT HOST RESPONSE
 ========================================== */
 
 async function submitResponse(surveyId) {
-    const params = new URLSearchParams(window.location.search);
-    const isRespondent = params.get("mode") === "respond";
-
     const { data: survey, error } = await supabaseClient
         .from("surveys")
         .select("*")
@@ -427,16 +474,7 @@ async function submitResponse(surveyId) {
     submitBtn.classList.add("hidden");
 
     message.classList.remove("hidden");
-    
-    if (isRespondent) {
-        message.innerHTML = `
-            <strong>Response submitted!</strong><br>
-            Thank you for participating.<br>
-            <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
-        `;
-    } else {
-        message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
-    }
+    message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
 
     anotherBtn.classList.remove("hidden");
 
@@ -450,15 +488,93 @@ async function submitResponse(surveyId) {
         anotherBtn.classList.add("hidden");
         submitBtn.classList.remove("hidden");
 
-        if (isRespondent) {
-            message.classList.remove("hidden");
-            message.innerHTML = `
-                <strong>Session Active</strong><br>
-                <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
-            `;
-        }
-
         document.getElementById("surveyHeader").scrollIntoView({ behavior: "smooth" });
+    };
+}
+
+/* ==========================================
+   SUBMIT ISOLATED RESPONDENT RESPONSE
+========================================== */
+
+async function submitRespondentResponse(surveyId) {
+    const { data: survey, error } = await supabaseClient
+        .from("surveys")
+        .select("*")
+        .eq("id", surveyId)
+        .single();
+
+    if (error || !survey || !survey.active || Date.now() >= survey.expires_at) {
+        await endSurvey(surveyId);
+        showResults(surveyId);
+        return;
+    }
+
+    const answers = [];
+    for (const question of survey.questions) {
+        const selected = document.querySelectorAll(`input[name="resp-question-${question.id}"]:checked`);
+        if (selected.length === 0) {
+            alert("Please answer all questions before submitting.");
+            return;
+        }
+        selected.forEach(input => {
+            answers.push({
+                questionId: question.id,
+                optionIndex: Number(input.value)
+            });
+        });
+    }
+
+    answers.forEach(answer => {
+        const q = survey.questions.find(q => q.id === answer.questionId);
+        if (q) q.options[answer.optionIndex].votes++;
+    });
+
+    const updatedResponses = survey.responses + 1;
+
+    const { error: updateError } = await supabaseClient
+        .from("surveys")
+        .update({
+            questions: survey.questions,
+            responses: updatedResponses
+        })
+        .eq("id", surveyId);
+
+    if (updateError) {
+        alert("Could not submit vote: " + updateError.message);
+        return;
+    }
+
+    const submitBtn = document.getElementById("submitRespondentBtn");
+    const message = document.getElementById("respondentMessage");
+    const anotherBtn = document.getElementById("anotherRespondentBtn");
+
+    document.getElementById("respondentQuestions").classList.add("hidden");
+    submitBtn.classList.add("hidden");
+
+    message.classList.remove("hidden");
+    message.innerHTML = `
+        <strong>Response submitted!</strong><br>
+        Thank you for participating.<br>
+        <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
+    `;
+
+    anotherBtn.classList.remove("hidden");
+
+    anotherBtn.onclick = () => {
+        document.querySelectorAll(`#respondentQuestions input:checked`).forEach(input => {
+            input.checked = false;
+        });
+
+        document.getElementById("respondentQuestions").classList.remove("hidden");
+        message.classList.remove("hidden");
+        message.innerHTML = `
+            <strong>Session Active</strong><br>
+            <small style="display:block; margin-top:4px;">Results will appear automatically when the session ends.</small>
+        `;
+        anotherBtn.classList.add("hidden");
+        submitBtn.classList.remove("hidden");
+
+        document.getElementById("respondentHeader").scrollIntoView({ behavior: "smooth" });
     };
 }
 
@@ -478,6 +594,42 @@ async function endSurvey(surveyId) {
         .from("surveys")
         .update({ active: false })
         .eq("id", surveyId);
+}
+
+/* ==========================================
+   RE-OPEN SESSION
+========================================== */
+
+async function reopenSession(surveyId) {
+    const confirmed = confirm("Are you sure you want to re-open this survey session for another 10 minutes?");
+    if (!confirmed) return;
+
+    const newExpiresAt = Date.now() + (10 * 60 * 1000);
+
+    const survey = surveys.find(s => s.id === surveyId);
+    if (survey) {
+        survey.active = true;
+        survey.expiresAt = newExpiresAt;
+    }
+
+    saveSurveys();
+
+    const { error } = await supabaseClient
+        .from("surveys")
+        .update({
+            active: true,
+            expires_at: newExpiresAt
+        })
+        .eq("id", surveyId);
+
+    if (error) {
+        alert("Could not re-open session: " + error.message);
+        return;
+    }
+
+    await fetchSurveys();
+    renderAdminSessions();
+    renderSurveyList();
 }
 
 /* ==========================================
@@ -626,7 +778,7 @@ async function renderSurveyList() {
 }
 
 /* ==========================================
-   OPEN SURVEY
+   OPEN HOST SURVEY
 ========================================== */
 
 function openSurvey(id) {
@@ -643,16 +795,14 @@ function openSurvey(id) {
 
     showPage("surveyPage");
 
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get("mode") ? `&mode=${params.get("mode")}` : "";
-    const url = `${window.location.origin}${window.location.pathname}?survey=${id}${modeParam}`;
+    const url = `${window.location.origin}${window.location.pathname}?survey=${id}`;
     history.pushState({}, "", url);
 
     renderSurvey(survey);
 }
 
 /* ==========================================
-   ADMIN
+   ADMIN MODAL
 ========================================== */
 
 document.getElementById("adminBtn").addEventListener("click", openAdminModal);
@@ -661,7 +811,6 @@ async function openAdminModal() {
     const modal = document.getElementById("adminModal");
     modal.classList.remove("hidden");
 
-    // Close modal when clicking outside content area
     modal.onclick = function (e) {
         if (e.target === modal) {
             closeAdminModal();
@@ -757,6 +906,10 @@ function goToHome() {
     showHome();
 }
 
+/* ==========================================
+   URL ROUTING INITIALIZATION
+========================================== */
+
 async function loadFromUrl() {
     const params = new URLSearchParams(window.location.search);
     const surveyId = params.get("survey");
@@ -786,14 +939,14 @@ async function loadFromUrl() {
     await fetchSurveys();
 
     if (mode === "respond") {
-        const backBtn = document.querySelector("#surveyPage .back-btn");
         const adminBtn = document.getElementById("adminBtn");
-        if (backBtn) backBtn.classList.add("hidden");
         if (adminBtn) adminBtn.classList.add("hidden");
 
-        // Apply the CSS class to disable top bar header navigation
         const brand = document.querySelector(".brand");
-        if (brand) brand.classList.add("disabled");
+        if (brand) {
+            brand.onclick = null;
+            brand.classList.add("disabled");
+        }
 
         if (!survey.active || Date.now() >= survey.expiresAt) {
             await endSurvey(surveyId);
@@ -801,7 +954,8 @@ async function loadFromUrl() {
             return;
         }
 
-        openSurvey(surveyId);
+        showPage("respondentPage");
+        renderRespondentPage(survey);
         return;
     }
 
@@ -819,39 +973,3 @@ async function loadFromUrl() {
 ========================================== */
 
 loadFromUrl();
-
-async function reopenSession(surveyId) {
-    const confirmed = confirm("Are you sure you want to re-open this survey session for another 10 minutes?");
-    if (!confirmed) return;
-
-    // Extend duration by 10 minutes from current time
-    const newExpiresAt = Date.now() + (10 * 60 * 1000);
-
-    // Update local state array
-    const survey = surveys.find(s => s.id === surveyId);
-    if (survey) {
-        survey.active = true;
-        survey.expiresAt = newExpiresAt;
-    }
-
-    saveSurveys();
-
-    // Update database directly
-    const { error } = await supabaseClient
-        .from("surveys")
-        .update({
-            active: true,
-            expires_at: newExpiresAt
-        })
-        .eq("id", surveyId);
-
-    if (error) {
-        alert("Could not re-open session: " + error.message);
-        return;
-    }
-
-    // Refresh data and modal view
-    await fetchSurveys();
-    renderAdminSessions();
-    renderSurveyList();
-}

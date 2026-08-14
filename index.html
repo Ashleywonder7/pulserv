@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Palserve</title>
+    <title>Pulserv</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -13,7 +13,7 @@
         <div class="brand" onclick="goToHome()">
             <div class="brand-icon">✦</div>
             <div>
-                <h1>Palserve</h1>
+                <h1>Pulserv</h1>
                 <span>Simple surveys. Instant results.</span>
             </div>
         </div>
@@ -198,7 +198,7 @@
 
 
     <!-- =========================
-         SURVEY PAGE
+         HOST / ADMIN SURVEY PAGE
     ========================== -->
 
     <main id="surveyPage" class="page hidden">
@@ -220,6 +220,33 @@
             <div id="responseMessage" class="response-message hidden"></div>
 
             <button id="anotherResponseBtn" class="secondary-btn full-width another-response-btn hidden">
+                Submit Another Response
+            </button>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         ISOLATED RESPONDENT PAGE
+    ========================== -->
+
+    <main id="respondentPage" class="page hidden">
+
+        <div class="respondent-container">
+
+            <div id="respondentHeader"></div>
+
+            <div id="respondentQuestions"></div>
+
+            <button id="submitRespondentBtn" class="primary-btn full-width">
+                Submit Response
+            </button>
+
+            <div id="respondentMessage" class="response-message hidden"></div>
+
+            <button id="anotherRespondentBtn" class="secondary-btn full-width another-response-btn hidden">
                 Submit Another Response
             </button>
 
@@ -255,13 +282,6 @@
             </div>
 
             <div id="resultsContent"></div>
-
-            <!--<button
-                id="anotherResponseBtn"
-                class="secondary-btn full-width hidden"
-            >
-                Submit Another Response
-            </button>-->
 
             <button
                 class="back-btn centered"
@@ -300,7 +320,11 @@
 
     </div>
 
-        <!-- SHARE LINK MODAL -->
+
+    <!-- =========================
+         SHARE LINK MODAL
+    ========================== -->
+
     <div id="shareModal" class="modal hidden">
         <div class="modal-content">
             <button class="close-modal" onclick="closeShareModal()">×</button>
