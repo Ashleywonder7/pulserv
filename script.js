@@ -595,16 +595,20 @@ async function submitResponse(surveyId) {
    END SURVEY
 ========================================== */
 
-function endSurvey(surveyId) {
-
-    const survey =
-        surveys.find(s => s.id === surveyId);
-
-    if (!survey) return;
-
-    survey.active = false;
+async function endSurvey(surveyId) {
+    // Update local state
+    const survey = surveys.find(s => s.id === surveyId);
+    if (survey) {
+        survey.active = false;
+    }
 
     saveSurveys();
+
+    // Update Supabase directly
+    await supabaseClient
+        .from("surveys")
+        .update({ active: false })
+        .eq("id", surveyId);
 }
 
 
@@ -619,110 +623,69 @@ function showResults(surveyId) {
     clearInterval(timerInterval);
     showPage("resultsPage");
 
-    document
-        .getElementById("resultsPage")
-        .classList.remove("hidden");
+    // Hide Back to Home button for participant link users
+    const params = new URLSearchParams(window.location.search);
+    const resultsBackBtn = document.querySelector("#resultsPage .back-btn");
 
+    if (params.get("mode") === "respond" && resultsBackBtn) {
+        resultsBackBtn.classList.add("hidden");
+    } else if (resultsBackBtn) {
+        resultsBackBtn.classList.remove("hidden");
+    }
 
-    document
-        .getElementById("resultsTitle")
-        .textContent = survey.title;
+    document.getElementById("resultsPage").classList.remove("hidden");
+    document.getElementById("resultsTitle").textContent = survey.title;
+    document.getElementById("resultsDescription").textContent = survey.description || "";
+    document.getElementById("totalResponses").textContent = survey.responses;
+    document.getElementById("resultsStatus").textContent = survey.active ? "Open" : "Ended";
 
-
-    document
-        .getElementById("resultsDescription")
-        .textContent = survey.description || "";
-
-
-    document
-        .getElementById("totalResponses")
-        .textContent = survey.responses;
-
-
-    document
-        .getElementById("resultsStatus")
-        .textContent =
-            survey.active ? "Open" : "Ended";
-
-
-    const resultsContent =
-        document.getElementById("resultsContent");
-
+    const resultsContent = document.getElementById("resultsContent");
     resultsContent.innerHTML = "";
 
+    if (params.get("mode") === "respond") {
+    const endingNote = document.createElement("p");
+    endingNote.style.textAlign = "center";
+    endingNote.style.marginTop = "20px";
+    endingNote.innerHTML = "<strong>Thank you for participating!</strong><br>This session has concluded.";
+    resultsContent.appendChild(endingNote);
+    }
 
     survey.questions.forEach((question, index) => {
+        const questionDiv = document.createElement("div");
+        questionDiv.className = "result-question";
 
-        const questionDiv =
-            document.createElement("div");
-
-        questionDiv.className =
-            "result-question";
-
-
-        const totalVotes =
-            question.options.reduce(
-                (sum, option) => sum + option.votes,
-                0
-            );
-
+        const totalVotes = question.options.reduce(
+            (sum, option) => sum + option.votes,
+            0
+        );
 
         let optionsHTML = "";
 
-
         question.options.forEach(option => {
-
             const percentage =
                 totalVotes === 0
                     ? 0
-                    : Math.round(
-                        (option.votes / totalVotes) * 100
-                    );
-
+                    : Math.round((option.votes / totalVotes) * 100);
 
             optionsHTML += `
-
                 <div class="result-option">
-
                     <div class="result-option-header">
-
-                        <span>
-                            ${escapeHtml(option.text)}
-                        </span>
-
-                        <strong>
-                            ${percentage}%
-                            (${option.votes})
-                        </strong>
-
+                        <span>${escapeHtml(option.text)}</span>
+                        <strong>${percentage}% (${option.votes})</strong>
                     </div>
-
                     <div class="result-bar">
-
-                        <div
-                            style="width:${percentage}%"
-                        ></div>
-
+                        <div style="width:${percentage}%"></div>
                     </div>
-
                 </div>
             `;
-
         });
 
-
         questionDiv.innerHTML = `
-
-            <h3>
-                ${index + 1}. ${escapeHtml(question.text)}
-            </h3>
-
+            <h3>${index + 1}. ${escapeHtml(question.text)}</h3>
             ${optionsHTML}
         `;
 
-
         resultsContent.appendChild(questionDiv);
-
     });
 }
 
@@ -934,21 +897,18 @@ function renderAdminSessions() {
 }
 
 
-function adminEndSession(id) {
-
-    const confirmed =
-        confirm(
-            "Are you sure you want to end this session? Respondents will no longer be able to submit responses."
-        );
-
+async function adminEndSession(id) {
+    const confirmed = confirm(
+        "Are you sure you want to end this session? Respondents will no longer be able to submit responses."
+    );
 
     if (!confirmed) return;
 
+    await endSurvey(id);
 
-    endSurvey(id);
-
+    // Refresh data and UI
+    await fetchSurveys();
     renderAdminSessions();
-
     renderSurveyList();
 }
 
