@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulserv</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="topbar">
+        <div class="brand" onclick="goToHome()">
+            <div class="brand-icon">✦</div>
+            <div>
+                <h1>Pulserv</h1>
+                <span>Simple surveys. Instant results.</span>
+            </div>
+        </div>
+
+        <button id="adminBtn" class="admin-btn">
+            Admin
+        </button>
+    </header>
+
+
+    <!-- =========================
+         HOME / ADMIN DASHBOARD
+    ========================== -->
+
+    <main id="homePage" class="page">
+
+        <section class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">QUICK SURVEYS</span>
+
+                <h2>
+                    Ask the question.<br>
+                    <span>Hear from everyone.</span>
+                </h2>
+
+                <p>
+                    Create a simple survey, share the link and watch
+                    responses come in.
+                </p>
+
+                <button id="createSurveyBtn" class="primary-btn">
+                    Create a Survey
+                </button>
+            </div>
+
+            <div class="hero-card">
+                <div class="floating-dot dot-one"></div>
+                <div class="floating-dot dot-two"></div>
+
+                <div class="chart-preview">
+                    <div class="mini-chart-header">
+                        <span>Sample Results</span>
+                        <span>Live</span>
+                    </div>
+
+                    <div class="mini-option">
+                        <div>
+                            <span>Dog</span>
+                            <strong>62%</strong>
+                        </div>
+                        <div class="bar">
+                            <div style="width:62%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mini-option">
+                        <div>
+                            <span>Cat</span>
+                            <strong>25%</strong>
+                        </div>
+                        <div class="bar">
+                            <div style="width:25%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mini-option">
+                        <div>
+                            <span>Chicken</span>
+                            <strong>13%</strong>
+                        </div>
+                        <div class="bar">
+                            <div style="width:13%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section class="survey-list-section">
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">YOUR SESSIONS</span>
+                    <h3>Survey Sessions</h3>
+                </div>
+            </div>
+
+            <div id="surveyList" class="survey-list">
+                <!-- Surveys added by JavaScript -->
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- =========================
+         CREATE SURVEY
+    ========================== -->
+
+    <main id="createPage" class="page hidden">
+
+        <div class="form-container">
+
+            <button class="back-btn" onclick="showHome()">
+                ← Back
+            </button>
+
+            <div class="page-heading">
+                <span class="eyebrow">NEW SESSION</span>
+                <h2>Create a Survey</h2>
+                <p>Set your questions and choose how long the survey should remain open.</p>
+            </div>
+
+            <form id="surveyForm">
+
+                <div class="input-card">
+
+                    <label>Survey Title</label>
+
+                    <input
+                        type="text"
+                        id="surveyTitle"
+                        placeholder="e.g. Sunday Service Feedback"
+                        required
+                    >
+
+                    <label>Survey Description</label>
+
+                    <textarea
+                        id="surveyDescription"
+                        placeholder="Tell respondents what this survey is about..."
+                    ></textarea>
+
+                    <label>Duration</label>
+
+                    <div class="duration-row">
+                        <input
+                            type="number"
+                            id="duration"
+                            min="1"
+                            value="10"
+                            required
+                        >
+
+                        <select id="durationUnit">
+                            <option value="minutes">Minutes</option>
+                            <option value="hours">Hours</option>
+                        </select>
+                    </div>
+
+                </div>
+
+
+                <div class="questions-header">
+                    <div>
+                        <span class="eyebrow">QUESTIONS</span>
+                        <h3>Survey Questions</h3>
+                    </div>
+                </div>
+
+
+                <div id="questionsContainer"></div>
+
+                <button
+                        type="button"
+                        id="addQuestionBtn"
+                        class="secondary-btn add-question-btn"
+                    >
+                        + Add Question
+                </button>
+
+
+                <button type="submit" class="primary-btn full-width">
+                    Create Survey
+                </button>
+
+            </form>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         SURVEY PAGE
+    ========================== -->
+
+    <main id="surveyPage" class="page hidden">
+
+        <div class="respondent-container">
+
+            <button class="back-btn" onclick="goToHome()">
+                ← Back to Home
+            </button>
+
+            <div id="surveyHeader"></div>
+
+            <div id="surveyQuestions"></div>
+
+            <button id="submitResponseBtn" class="primary-btn full-width">
+                Submit Response
+            </button>
+
+            <div id="responseMessage" class="response-message hidden"></div>
+
+            <button id="anotherResponseBtn" class="secondary-btn full-width another-response-btn hidden">
+                Submit Another Response
+            </button>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         RESULTS PAGE
+    ========================== -->
+
+    <main id="resultsPage" class="page hidden">
+
+        <div class="results-container">
+
+            <div class="results-header">
+                <span class="eyebrow">SURVEY RESULTS</span>
+                <h2 id="resultsTitle"></h2>
+                <p id="resultsDescription"></p>
+
+                <div class="result-summary">
+                    <div>
+                        <strong id="totalResponses">0</strong>
+                        <span>Responses</span>
+                    </div>
+
+                    <div>
+                        <strong id="resultsStatus">Ended</strong>
+                        <span>Status</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultsContent"></div>
+
+            <!--<button
+                id="anotherResponseBtn"
+                class="secondary-btn full-width hidden"
+            >
+                Submit Another Response
+            </button>-->
+
+            <button
+                class="back-btn centered"
+                onclick="showHome()"
+            >
+                ← Back to Home
+            </button>
+
+        </div>
+
+    </main>
+
+
+    <!-- =========================
+         ADMIN MODAL
+    ========================== -->
+
+    <div id="adminModal" class="modal hidden">
+
+        <div class="modal-content">
+
+            <button
+                class="close-modal"
+                onclick="closeAdminModal()"
+            >
+                ×
+            </button>
+
+            <span class="eyebrow">ADMIN</span>
+
+            <h2>Manage Sessions</h2>
+
+            <div id="adminSessions"></div>
+
+        </div>
+
+    </div>
+
+        <!-- SHARE LINK MODAL -->
+    <div id="shareModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeShareModal()">×</button>
+            <h2>Share Survey</h2>
+            <p>Share this link with participants to collect responses.</p>
+            
+            <div style="display: flex; gap: 8px; margin-top: 20px;">
+                <input type="text" id="shareUrlInput" readonly>
+                <button id="copyUrlBtn" class="primary-btn" onclick="copyShareUrl()">Copy</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script src="script.js"></script>
+
+</body>
+</html>
