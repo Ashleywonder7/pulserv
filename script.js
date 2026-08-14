@@ -550,12 +550,11 @@ async function submitResponse(surveyId) {
     }
 
     if (isRespondent) {
-        // Clear selected choices so they can submit another response
+        // Participant flow: clear inputs & maintain session
         document.querySelectorAll(`#surveyQuestions input:checked`).forEach(input => {
             input.checked = false;
         });
 
-        // Show confirmation banner without hiding questions
         const message = document.getElementById("responseMessage");
         message.classList.remove("hidden");
         message.innerHTML = `
@@ -563,15 +562,31 @@ async function submitResponse(surveyId) {
             <small style="display:block; margin-top:6px; opacity:0.85;">Results will appear automatically when the session ends.</small>
         `;
 
-        // Smoothly scroll back to the top of the questions
         document.getElementById("surveyQuestions").scrollIntoView({ behavior: "smooth" });
     } else {
-        // Default host view
-        document.getElementById("submitResponseBtn").classList.add("hidden");
+        // Host flow: hide submit, show success message & enable another response button
+        const submitBtn = document.getElementById("submitResponseBtn");
         const message = document.getElementById("responseMessage");
+        const anotherBtn = document.getElementById("anotherResponseBtn");
+
+        submitBtn.classList.add("hidden");
         message.classList.remove("hidden");
         message.innerHTML = `<strong>Response submitted!</strong><br>Thank you for participating.`;
-        document.getElementById("anotherResponseBtn").classList.remove("hidden");
+        anotherBtn.classList.remove("hidden");
+
+        anotherBtn.onclick = () => {
+            // Uncheck inputs
+            document.querySelectorAll(`#surveyQuestions input:checked`).forEach(input => {
+                input.checked = false;
+            });
+
+            // Restore form layout
+            message.classList.add("hidden");
+            anotherBtn.classList.add("hidden");
+            submitBtn.classList.remove("hidden");
+
+            document.getElementById("surveyQuestions").scrollIntoView({ behavior: "smooth" });
+        };
     }
 }
 
@@ -1068,3 +1083,9 @@ async function loadFromUrl() {
 
     openSurvey(surveyId);
 }
+
+/* ==========================================
+   INITIALIZE APP
+========================================== */
+
+loadFromUrl();
